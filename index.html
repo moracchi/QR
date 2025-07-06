@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QRコード作成ツール Pro</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+
+        .main-content {
+            padding: 40px;
+        }
+
+        .input-section {
+            background: #f8fafc;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #374151;
+            font-size: 0.95rem;
+        }
+
+        .text-input {
+            width: 100%;
+            padding: 15px 20px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .text-input:focus {
+            outline: none;
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr auto;
+            gap: 20px;
+            align-items: end;
+        }
+
+        .size-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .size-select {
+            padding: 12px 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            background: white;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+
+        .size-select:focus {
+            outline: none;
+            border-color: #4f46e5;
+        }
+
+        .generate-btn {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .generate-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(79, 70, 229, 0.3);
+        }
+
+        .generate-btn:active {
+            transform: translateY(0);
+        }
+
+        .result-section {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            border: 1px solid #e2e8f0;
+            min-height: 300px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .qr-display {
+            margin-bottom: 20px;
+        }
+
+        .qr-display img {
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .qr-display img:hover {
+            transform: scale(1.05);
+        }
+
+        .download-section {
+            display: none;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .download-btn {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .download-btn:hover {
+            background: #059669;
+            transform: translateY(-2px);
+        }
+
+        .placeholder {
+            color: #9ca3af;
+            font-size: 1.1rem;
+        }
+
+        .loading {
+            display: none;
+            color: #6b7280;
+        }
+
+        .loading i {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+            .controls {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .main-content {
+                padding: 20px;
+            }
+        }
+
+        .info-text {
+            margin-top: 15px;
+            color: #6b7280;
+            font-size: 0.9rem;
+        }
+
+        .hidden-link {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-qrcode"></i> QRコード作成ツール Pro</h1>
+            <p>テキストを入力してプロフェッショナルなQRコードを生成</p>
+        </div>
+
+        <div class="main-content">
+            <div class="input-section">
+                <div class="input-group">
+                    <label for="textInput">
+                        <i class="fas fa-edit"></i> QRコードにするテキスト
+                    </label>
+                    <input type="text" id="textInput" class="text-input" 
+                           placeholder="URL、テキスト、電話番号など何でも入力できます"
+                           maxlength="2000">
+                </div>
+
+                <div class="controls">
+                    <div class="size-group">
+                        <label for="sizeSelect">
+                            <i class="fas fa-expand-arrows-alt"></i> サイズ
+                        </label>
+                        <select id="sizeSelect" class="size-select">
+                            <option value="150">小さい (150×150)</option>
+                            <option value="200" selected>標準 (200×200)</option>
+                            <option value="300">大きい (300×300)</option>
+                            <option value="400">特大 (400×400)</option>
+                            <option value="500">最大 (500×500)</option>
+                        </select>
+                    </div>
+
+                    <div class="size-group">
+                        <label>
+                            <i class="fas fa-palette"></i> エラー訂正
+                        </label>
+                        <select id="errorCorrection" class="size-select">
+                            <option value="L">低 (7%)</option>
+                            <option value="M" selected>中 (15%)</option>
+                            <option value="Q">高 (25%)</option>
+                            <option value="H">最高 (30%)</option>
+                        </select>
+                    </div>
+
+                    <button onclick="generateQR()" class="generate-btn">
+                        <i class="fas fa-magic"></i> 生成
+                    </button>
+                </div>
+            </div>
+
+            <div class="result-section">
+                <div id="qrcode" class="qr-display">
+                    <div class="placeholder">
+                        <i class="fas fa-qrcode" style="font-size: 3rem; margin-bottom: 15px; opacity: 0.3;"></i>
+                        <p>上記でテキストを入力して「生成」ボタンを押してください</p>
+                    </div>
+                </div>
+
+                <div class="loading" id="loading">
+                    <i class="fas fa-spinner"></i> 生成中...
+                </div>
+
+                <div id="downloadSection" class="download-section">
+                    <button onclick="downloadQR('png')" class="download-btn">
+                        <i class="fas fa-download"></i> PNG
+                    </button>
+                    <button onclick="downloadQR('jpg')" class="download-btn">
+                        <i class="fas fa-download"></i> JPG
+                    </button>
+                </div>
+
+                <div class="info-text">
+                    生成されたQRコードは右クリックで保存、またはダウンロードボタンをご利用ください
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 隠しリンク（ダウンロード用） -->
+    <a id="hiddenLink" class="hidden-link" download="qrcode.png"></a>
+
+    <script>
+        let currentQRUrl = null;
+        let currentText = '';
+        let currentSize = '';
+
+        function generateQR() {
+            const text = document.getElementById('textInput').value.trim();
+            const size = document.getElementById('sizeSelect').value;
+            const errorCorrection = document.getElementById('errorCorrection').value;
+            const qrCodeDiv = document.getElementById('qrcode');
+            const loading = document.getElementById('loading');
+            const downloadSection = document.getElementById('downloadSection');
+            
+            if (!text) {
+                alert('テキストを入力してください');
+                return;
+            }
+
+            // ローディング表示
+            qrCodeDiv.style.display = 'none';
+            loading.style.display = 'block';
+            downloadSection.style.display = 'none';
+
+            const encodedText = encodeURIComponent(text);
+            const qrUrl = `https://quickchart.io/qr?text=${encodedText}&size=${size}x${size}&ecLevel=${errorCorrection}&margin=1`;
+            
+            const img = new Image();
+            img.crossOrigin = "anonymous"; // CORS設定
+            img.onload = function() {
+                // ローディング非表示
+                loading.style.display = 'none';
+                qrCodeDiv.style.display = 'block';
+                
+                qrCodeDiv.innerHTML = '';
+                img.style.borderRadius = '10px';
+                img.style.boxShadow = '0 10px 30px rgba(0, 0, 0, 0.1)';
+                img.alt = 'Generated QR Code';
+                qrCodeDiv.appendChild(img);
+                
+                // 現在のQR情報を保存
+                currentQRUrl = qrUrl;
+                currentText = text;
+                currentSize = size;
+                
+                downloadSection.style.display = 'flex';
+            };
+            
+            img.onerror = function() {
+                loading.style.display = 'none';
+                qrCodeDiv.style.display = 'block';
+                qrCodeDiv.innerHTML = '<p style="color: red;">QRコード生成に失敗しました</p>';
+            };
+            
+            img.src = qrUrl;
+        }
+
+        async function downloadQR(format) {
+            if (!currentQRUrl) return;
+
+            try {
+                // 画像を直接ダウンロード
+                const response = await fetch(currentQRUrl);
+                const blob = await response.blob();
+                
+                // JPG形式の場合、PNG to JPG変換
+                if (format === 'jpg') {
+                    const convertedBlob = await convertPngToJpg(blob);
+                    downloadBlob(convertedBlob, `qrcode_${currentSize}x${currentSize}.jpg`);
+                } else {
+                    downloadBlob(blob, `qrcode_${currentSize}x${currentSize}.png`);
+                }
+            } catch (error) {
+                console.error('ダウンロードエラー:', error);
+                alert('ダウンロードに失敗しました。右クリックから保存をお試しください。');
+            }
+        }
+
+        function downloadBlob(blob, filename) {
+            const url = URL.createObjectURL(blob);
+            const link = document.getElementById('hiddenLink');
+            link.href = url;
+            link.download = filename;
+            link.click();
+            URL.revokeObjectURL(url);
+        }
+
+        async function convertPngToJpg(pngBlob) {
+            return new Promise((resolve) => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                const img = new Image();
+                
+                img.onload = function() {
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    
+                    // 白背景を追加
+                    ctx.fillStyle = 'white';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    
+                    // 画像を描画
+                    ctx.drawImage(img, 0, 0);
+                    
+                    canvas.toBlob((blob) => {
+                        resolve(blob);
+                    }, 'image/jpeg', 0.9);
+                };
+                
+                img.src = URL.createObjectURL(pngBlob);
+            });
+        }
+
+        // Enterキーで生成
+        document.getElementById('textInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                generateQR();
+            }
+        });
+
+        // 入力時のリアルタイムフィードバック
+        document.getElementById('textInput').addEventListener('input', function(e) {
+            const length = e.target.value.length;
+            if (length > 1900) {
+                e.target.style.borderColor = '#ef4444';
+            } else {
+                e.target.style.borderColor = '#e2e8f0';
+            }
+        });
+    </script>
+</body>
+</html>
