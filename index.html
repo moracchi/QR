@@ -89,7 +89,7 @@
 
         .controls {
             display: grid;
-            grid-template-columns: 1fr 1fr auto;
+            grid-template-columns: 1fr 1fr;
             gap: 20px;
             align-items: end;
         }
@@ -99,42 +99,24 @@
             flex-direction: column;
         }
 
-        .size-select {
+        .size-select, .color-input {
             padding: 12px 15px;
             border: 2px solid #e2e8f0;
             border-radius: 8px;
             background: white;
             font-size: 0.95rem;
             transition: all 0.3s ease;
+            height: 48px;
         }
 
-        .size-select:focus {
+        .size-select:focus, .color-input:focus {
             outline: none;
             border-color: #4f46e5;
         }
-
-        .generate-btn {
-            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-            color: white;
-            border: none;
-            padding: 15px 30px;
-            border-radius: 10px;
-            font-size: 1rem;
-            font-weight: 600;
+        
+        .color-input {
+            padding: 5px;
             cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .generate-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(79, 70, 229, 0.3);
-        }
-
-        .generate-btn:active {
-            transform: translateY(0);
         }
 
         .result-section {
@@ -269,8 +251,8 @@
                     </div>
 
                     <div class="size-group">
-                        <label>
-                            <i class="fas fa-palette"></i> エラー訂正
+                        <label for="errorCorrection">
+                            <i class="fas fa-shield-alt"></i> エラー訂正
                         </label>
                         <select id="errorCorrection" class="size-select">
                             <option value="L">低 (7%)</option>
@@ -280,9 +262,19 @@
                         </select>
                     </div>
 
-                    <button onclick="generateQR()" class="generate-btn">
-                        <i class="fas fa-magic"></i> 生成
-                    </button>
+                    <div class="size-group">
+                        <label for="fgColor">
+                            <i class="fas fa-fill-drip"></i> QRコードの色
+                        </label>
+                        <input type="color" id="fgColor" class="color-input" value="#000000">
+                    </div>
+
+                    <div class="size-group">
+                        <label for="bgColor">
+                            <i class="fas fa-paint-brush"></i> 背景色
+                        </label>
+                        <input type="color" id="bgColor" class="color-input" value="#FFFFFF">
+                    </div>
                 </div>
             </div>
 
@@ -290,7 +282,7 @@
                 <div id="qrcode" class="qr-display">
                     <div class="placeholder">
                         <i class="fas fa-qrcode" style="font-size: 3rem; margin-bottom: 15px; opacity: 0.3;"></i>
-                        <p>上記でテキストを入力して「生成」ボタンを押してください</p>
+                        <p>テキストを入力するか設定を変更すると、QRコードが自動で更新されます</p>
                     </div>
                 </div>
 
@@ -321,42 +313,50 @@
         let currentQRUrl = null;
         let currentText = '';
         let currentSize = '';
+        let debounceTimer = null;
 
         function generateQR() {
             const text = document.getElementById('textInput').value.trim();
             const size = document.getElementById('sizeSelect').value;
             const errorCorrection = document.getElementById('errorCorrection').value;
+            const fgColor = document.getElementById('fgColor').value.substring(1);
+            const bgColor = document.getElementById('bgColor').value.substring(1);
+            
             const qrCodeDiv = document.getElementById('qrcode');
             const loading = document.getElementById('loading');
             const downloadSection = document.getElementById('downloadSection');
             
             if (!text) {
-                alert('テキストを入力してください');
+                qrCodeDiv.innerHTML = `<div class="placeholder">
+                        <i class="fas fa-qrcode" style="font-size: 3rem; margin-bottom: 15px; opacity: 0.3;"></i>
+                        <p>テキストを入力すると、QRコードが自動で生成されます</p>
+                    </div>`;
+                qrCodeDiv.style.display = 'block';
+                loading.style.display = 'none';
+                downloadSection.style.display = 'none';
+                currentQRUrl = null;
                 return;
             }
 
-            // ローディング表示
-            qrCodeDiv.style.display = 'none';
             loading.style.display = 'block';
+            qrCodeDiv.style.display = 'none';
             downloadSection.style.display = 'none';
 
             const encodedText = encodeURIComponent(text);
-            const qrUrl = `https://quickchart.io/qr?text=${encodedText}&size=${size}x${size}&ecLevel=${errorCorrection}&margin=1`;
+            // 修正：パラメータ名をQuickChart.ioの正しい形式に変更
+            const qrUrl = `https://quickchart.io/qr?text=${encodedText}&size=${size}x${size}&ecLevel=${errorCorrection}&margin=1&dark=${fgColor}&light=${bgColor}`;
             
             const img = new Image();
-            img.crossOrigin = "anonymous"; // CORS設定
+            img.crossOrigin = "anonymous";
             img.onload = function() {
-                // ローディング非表示
                 loading.style.display = 'none';
                 qrCodeDiv.style.display = 'block';
-                
                 qrCodeDiv.innerHTML = '';
                 img.style.borderRadius = '10px';
                 img.style.boxShadow = '0 10px 30px rgba(0, 0, 0, 0.1)';
                 img.alt = 'Generated QR Code';
                 qrCodeDiv.appendChild(img);
                 
-                // 現在のQR情報を保存
                 currentQRUrl = qrUrl;
                 currentText = text;
                 currentSize = size;
@@ -377,13 +377,14 @@
             if (!currentQRUrl) return;
 
             try {
-                // 画像を直接ダウンロード
                 const response = await fetch(currentQRUrl);
+                if (!response.ok) {
+                    throw new Error(`Network response was not ok, status: ${response.status}`);
+                }
                 const blob = await response.blob();
                 
-                // JPG形式の場合、PNG to JPG変換
                 if (format === 'jpg') {
-                    const convertedBlob = await convertPngToJpg(blob);
+                    const convertedBlob = await convertToJpg(blob);
                     downloadBlob(convertedBlob, `qrcode_${currentSize}x${currentSize}.jpg`);
                 } else {
                     downloadBlob(blob, `qrcode_${currentSize}x${currentSize}.png`);
@@ -403,40 +404,65 @@
             URL.revokeObjectURL(url);
         }
 
-        async function convertPngToJpg(pngBlob) {
-            return new Promise((resolve) => {
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
+        async function convertToJpg(sourceBlob) {
+            return new Promise((resolve, reject) => {
                 const img = new Image();
-                
-                img.onload = function() {
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
                     canvas.width = img.width;
                     canvas.height = img.height;
+                    const ctx = canvas.getContext('2d');
                     
-                    // 白背景を追加
-                    ctx.fillStyle = 'white';
+                    const bgColor = document.getElementById('bgColor').value;
+                    ctx.fillStyle = bgColor;
                     ctx.fillRect(0, 0, canvas.width, canvas.height);
                     
-                    // 画像を描画
                     ctx.drawImage(img, 0, 0);
                     
                     canvas.toBlob((blob) => {
-                        resolve(blob);
-                    }, 'image/jpeg', 0.9);
+                        if (blob) {
+                            resolve(blob);
+                        } else {
+                            reject(new Error('Canvas to Blob conversion failed'));
+                        }
+                    }, 'image/jpeg', 0.95);
+                    URL.revokeObjectURL(img.src);
                 };
-                
-                img.src = URL.createObjectURL(pngBlob);
+                img.onerror = () => {
+                    reject(new Error('Image loading failed for blob conversion.'));
+                    URL.revokeObjectURL(img.src);
+                };
+                img.src = URL.createObjectURL(sourceBlob);
             });
         }
 
-        // Enterキーで生成
+        function debounce(func, delay) {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => func.apply(this), delay);
+        }
+
+        function handleInputChange() {
+            debounce(generateQR, 500);
+        }
+
+        // Event Listeners for real-time updates
+        document.getElementById('textInput').addEventListener('input', handleInputChange);
+        document.getElementById('fgColor').addEventListener('input', handleInputChange);
+        document.getElementById('bgColor').addEventListener('input', handleInputChange);
+        
+        document.getElementById('sizeSelect').addEventListener('change', generateQR);
+        document.getElementById('errorCorrection').addEventListener('change', generateQR);
+
+        // Enterキーでの即時生成
         document.getElementById('textInput').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
+                e.preventDefault();
+                clearTimeout(debounceTimer); // デバウンスをキャンセルして即時実行
                 generateQR();
             }
         });
 
-        // 入力時のリアルタイムフィードバック
+        // 入力時の文字数フィードバック
         document.getElementById('textInput').addEventListener('input', function(e) {
             const length = e.target.value.length;
             if (length > 1900) {
